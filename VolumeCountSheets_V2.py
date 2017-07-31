@@ -19,13 +19,10 @@ import pdfquery
 # Loop through all the CSVs. Try the file: if error 
 # Also create a new csv that keeps track of the status of each one return 1 for complete, 0 for error
 
-folder = 'Z:/VisionZero/GIS/Projects/LADOT_TrafficCounts/Manual Counts-20170526T005814Z-001/Manual Counts/'
+folder = 'TrafficCountData/Manual Counts-20170526T005814Z-001/Manual Counts/'
 filename = '2ND.48TH.150611-NDSMAN.pdf'
 path = folder + filename
 
-#path = '/home/tcblack/Downloads/ZELZAH.OXNARD.150429-NDSMAN.pdf'
-
-#path = 'C:/Users/dotcid034/Downloads/temp/pdf_testing/Louise.SanJose.170328-NDSMAN.pdf'
 
 def pdf_extract(path):
 
