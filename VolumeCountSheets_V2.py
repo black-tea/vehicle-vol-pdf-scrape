@@ -479,10 +479,6 @@ def pdf_extract(path):
 
     # Append to Manual_TC
     Manual_TC['Spec_Veh'] = special_vehicles
-    #print "special veh scrape"
-    #print special_veh_scrape
-    #print "special veh"
-    #print special_vehicles
 
     ##### Peak Counts
     peak_types = ['am15','pm15','am60','pm60']
@@ -504,11 +500,7 @@ def pdf_extract(path):
         ('EB', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['pk']['ebvol']))),
         ('WB', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['pk']['wbvol'])))
         ])
-    #print "peak time scrape"
-    #print peak_time_scrape
 
-    #print "peak vol scrape"
-    #print peak_vol_scrape
     peak_direction = []
 
     for direction in directions:
@@ -516,8 +508,6 @@ def pdf_extract(path):
         peak_dict = {}    
         peak_time_split = peak_time_scrape[direction].split()
         peak_vol_split = peak_vol_scrape[direction].split()
-        #print "LENGTH"
-        #print len(peak_time_split)
 
         for i in range(0,len(peak_time_split)): #COME BACK AND CHECK LATER
 
@@ -529,22 +519,13 @@ def pdf_extract(path):
 
     # Append to Manual_TC
     Manual_TC['PeakVol'] = peak_direction
-    #print "PEAK DIRECTION TESTING"
-    #print Manual_TC['PeakVol']
-    #print 'END PEAK DIRECTION TESTING'
-    
 
     ##### Survey Hours (offsets based on 'NORTHBOUND Approach label')
-    #print Label_coords['survey_hours']['box_coords']
     survey_hours = pdf.extract([
         ('with_formatter','text'),
         ('hours', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['survey_hours']['box_coords'])))
         ])
-        
-    #print "survey hours pre-split"
-    #print survey_hours['hours']
     survey_hours['hours'] = survey_hours['hours'].split()
-    print survey_hours
 
     #Format survey hours using strptime
     for i in range(0, len(survey_hours['hours'])):
@@ -568,10 +549,7 @@ def pdf_extract(path):
         volume_extract[direction] = {}
 
         for movement in movements:
-            #print direction
-            #print movement
             coords = Label_coords[direction][movement]
-            #print coords
 
             if movement == 'Th':
                 extract = pdf.extract([
@@ -584,11 +562,8 @@ def pdf_extract(path):
                     ('with_formatter','text'),
                     ('test','LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in coords)))
                     ])
-            #print extract
             volume_extract[direction][movement] = extract['test'].split()
-    #print "volume extract begin"
-    #print volume_extract
-    #print "volume extract end"
+
 
     # Final list of dictionaries
     volume_data = []
@@ -603,13 +578,9 @@ def pdf_extract(path):
                 empty_dict['end_time'] = survey_hours['hours'][i][1]
                 empty_dict['volume'] = volume_extract[direction][movement][i]
                 volume_data.append(empty_dict)
-    #print "volume data"
-    #print(volume_data)
 
     # Append to Manual_TC
     Manual_TC['Volume'] = volume_data
-    #print Manual_TC
-    
 
     ##### Ped / Schoolchildren Volume Data
     # Initial Data Grab
@@ -620,8 +591,6 @@ def pdf_extract(path):
         ('WL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Ped']['W/L']))),
         ('EL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Ped']['E/L'])))
         ])
-    #print "ped scrape!"
-    #print ped_scrape
     
     sch_scrape = pdf.extract([
         ('with_formatter','text'),
@@ -630,12 +599,6 @@ def pdf_extract(path):
         ('WL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Sch']['W/L']))),
         ('EL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Sch']['E/L'])))
     ])
-    #print "sch scrape!"
-    #print sch_scrape
-
-    #print "PED SCH SCRAPE!"
-    #print ped_scrape
-    #exit()
 
     # Split Ped v. Sch
     ped_sch_extract = {}
@@ -652,8 +615,8 @@ def pdf_extract(path):
         for pedtype in ped_sch_extract[leg]:
             for i in range(0,len(ped_sch_extract[leg][pedtype])):
                 ped_sch_dict = {}
-                ped_sch_dict['XingLeg'] = leg
-                ped_sch_dict['Type'] = pedtype
+                ped_sch_dict['xing_leg'] = leg
+                ped_sch_dict['type'] = pedtype
                 ped_sch_dict['start_time'] = survey_hours['hours'][i][0]
                 ped_sch_dict['end_time'] = survey_hours['hours'][i][1]
                 ped_sch_dict['volume'] = ped_sch_extract[leg][pedtype][i]
@@ -661,33 +624,9 @@ def pdf_extract(path):
 
     # Append to Manual_TC
     Manual_TC['Pedestrian'] = ped_sch_data
-    #print 'PED DATA!!!!!!!'
-    #print Manual_TC['Pedestrian']
 
     ##### Return Final Dict
-    #print "  "
-    #print Manual_TC
     print "success!"
     return Manual_TC
 
-#pdf_extract(path)
-##### This part is when i get better at looping through the whole thing
-
-files = glob.glob('Z:\VisionZero\GIS\Projects\LADOT_TrafficCounts\Manual Counts-20170526T005814Z-001\Manual Counts\*.pdf')
-
-print len(files)
-success = 0
-failures = 0
-
-for file in files:
-    try:
-        pdf_extract(file)
-        success = success + 1
-    except:
-        print "failure"
-        failures = failures + 1
-print "Success Count"
-print success
-print "Failure Count"
-print failures
 
