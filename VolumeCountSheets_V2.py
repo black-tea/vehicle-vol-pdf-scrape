@@ -24,7 +24,7 @@ filename = '2ND.48TH.150611-NDSMAN.pdf'
 path = folder + filename
 
 
-def pdf_extract(path):
+def pdf_extract(path):#, countid):
 
     # Load the PDF
     pdf = pdfquery.PDFQuery(path,resort=False)
@@ -475,6 +475,7 @@ def pdf_extract(path):
             temp_dict['approach'] = direction
             temp_dict['type'] = special_veh_list[i]
             temp_dict['volume'] = special_veh_dict[direction][i]
+            #temp_dict['count_id'] = countid
             special_vehicles.append(temp_dict)
 
     # Append to Manual_TC
@@ -515,6 +516,7 @@ def pdf_extract(path):
             peak_dict['approach'] = direction
             peak_dict['time'] = peak_time_split[i]
             peak_dict['volume'] = peak_vol_split[i]
+            #peak_dict['count_id'] = countid
         peak_direction.append(peak_dict)
 
     # Append to Manual_TC
@@ -577,6 +579,7 @@ def pdf_extract(path):
                 empty_dict['start_time'] = survey_hours['hours'][i][0]
                 empty_dict['end_time'] = survey_hours['hours'][i][1]
                 empty_dict['volume'] = volume_extract[direction][movement][i]
+                #empty_dict['count_id'] = countid
                 volume_data.append(empty_dict)
 
     # Append to Manual_TC
@@ -620,6 +623,7 @@ def pdf_extract(path):
                 ped_sch_dict['start_time'] = survey_hours['hours'][i][0]
                 ped_sch_dict['end_time'] = survey_hours['hours'][i][1]
                 ped_sch_dict['volume'] = ped_sch_extract[leg][pedtype][i]
+                #ped_sch_dict['count_id'] = countid
                 ped_sch_data.append(ped_sch_dict)
 
     # Append to Manual_TC
