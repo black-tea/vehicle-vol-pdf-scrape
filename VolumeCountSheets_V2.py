@@ -70,7 +70,7 @@ def pdf_extract(path):#, countid):
     Offsets['Day:'] = [5,-5,120,15]
     Offsets['Date:'] = [30,-8,130,15]
     Offsets['Weather:'] = [30,-8,130,15]
-    Offsets['Hours:'] = [30,-8,130,15]
+    Offsets['Hours:'] = [30,-8,140,15]
     Offsets['School Day:'] = [40,-5,120,15]
     Offsets['District:'] = [40,-5,130,15]
     #Offsets['I/S CODE']
@@ -441,7 +441,7 @@ def pdf_extract(path):#, countid):
         ('weather', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Weather:']['box_coords']))),
         ('hours', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Hours:']['box_coords']))),
         ('school_day', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['School Day:']['box_coords']))),
-        ('district', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['School Day:']['box_coords']))),
+        ('district', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['District:']['box_coords']))),
         ])
 
     # TESTING
