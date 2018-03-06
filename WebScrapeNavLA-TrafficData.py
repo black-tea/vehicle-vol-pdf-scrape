@@ -9,7 +9,7 @@ Count_data = []
 base_url = "http://boemaps.eng.ci.la.ca.us/reports/dot_traffic_data_report.cfm?trafficid="
 
 # Loop through integers, grab all data in range
-for i in range(1,6):
+for i in range(1,9000):
     time.sleep(.1)
     print i
     d = {}
@@ -64,7 +64,7 @@ for i in range(1,6):
         d['intersection'] = intersection
         Count_data.append(d)
 
-with open('Z:/VisionZero/GIS/Projects/LADOT_TrafficCounts/navLAdump.txt', 'w') as outfile:
+with open('TrafficCountData/navLAdump.txt', 'w') as outfile:
     json.dump(Count_data, outfile)
 
     # Verify
