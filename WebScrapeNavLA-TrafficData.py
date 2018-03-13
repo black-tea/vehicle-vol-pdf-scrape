@@ -9,7 +9,7 @@ Count_data = []
 base_url = "http://boemaps.eng.ci.la.ca.us/reports/dot_traffic_data_report.cfm?trafficid="
 
 # Loop through integers, grab all data in range
-for i in range(1,9000):
+for i in range(1,15):
     time.sleep(.1)
     print i
     d = {}
@@ -17,11 +17,12 @@ for i in range(1,9000):
     url = base_url + str(i)
     page = requests.get(url)
     tree = html.fromstring(page.content)
+    print(html.tostring(tree))
     
     # Parse the data
     table_info = tree.xpath('//td[@class="tablerecord"]/text()')
     if len(table_info) > 0:
-
+        #print(html.tostring(table_info))
         # Parse the Node ID
         node_id = tree.xpath('//td[@class="tablerecord"]/text()')[0]
         node_id = node_id.replace(u'\xa0', u'')
@@ -51,8 +52,9 @@ for i in range(1,9000):
         # If there is at least manual count PDF, grab filenames
         if len(manual_count_table) > 0:
             manual_count_table = etree.XML(etree.tostring(manual_count_table[0]))
+            #print(manual_count_table)
             manual_count_pdfs = manual_count_table.xpath('//a/text()')
-            #print manual_count_pdfs
+            print(manual_count_pdfs)
             d['manual'] = manual_count_pdfs
         else:
             d['manual'] = []
@@ -64,7 +66,7 @@ for i in range(1,9000):
         d['intersection'] = intersection
         Count_data.append(d)
 
-with open('TrafficCountData/navLAdump.txt', 'w') as outfile:
+with open('data/TrafficCountData/navLAdumpTEST.txt', 'w') as outfile:
     json.dump(Count_data, outfile)
 
     # Verify
