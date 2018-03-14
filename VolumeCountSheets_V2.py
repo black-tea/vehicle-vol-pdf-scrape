@@ -19,9 +19,9 @@ import pdfquery
 # Loop through all the CSVs. Try the file: if error 
 # Also create a new csv that keeps track of the status of each one return 1 for complete, 0 for error
 
-folder = 'TrafficCountData/Manual Counts-20170526T005814Z-001/Manual Counts/'
-filename = '2ND.48TH.150611-NDSMAN.pdf'
-path = folder + filename
+#folder = 'TrafficCountData/Manual Counts-20170526T005814Z-001/Manual Counts/'
+#filename = '2ND.48TH.150611-NDSMAN.pdf'
+#path = folder + filename
 
 
 def pdf_extract(path):#, countid):
@@ -630,7 +630,7 @@ def pdf_extract(path):#, countid):
     Manual_TC['Pedestrian'] = ped_sch_data
 
     ##### Return Final Dict
-    print "success!"
+    #print "success!"
     return Manual_TC
 
 
