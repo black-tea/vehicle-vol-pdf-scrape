@@ -10,6 +10,9 @@ import glob
 
 from datetime import datetime, date, time
 import pdfquery
+import calendar
+print(list(calendar.month_abbr))
+print(datetime.strptime("FEB 24, 1994", "%b %d, %Y"))
 
 
 def pdf_extract(path):
@@ -25,7 +28,7 @@ def pdf_extract(path):
     # Begin with reference points
 
     LabelList = ["North/South",'East/West','Day:','Date:','Weather:','Hours:',
-                 'School Day:','District:','WHEELED','BIKES','BUSES','I/S CODE',
+                 'School Day:','District:','WHEELED','BIKES','BUSES',#'I/S CODE',
                  'N/B TIME','S/B TIME','E/B TIME','W/B TIME','NORTHBOUND Approach',
                  'SOUTHBOUND Approach','EASTBOUND Approach','WESTBOUND Approach',
                  'XING S/L','XING N/L','XING W/L','XING E/L'] # commented out 'survey_hours' label
@@ -34,7 +37,7 @@ def pdf_extract(path):
     Offsets['North/South'] = [70,-5,350,15]
     Offsets['East/West'] = [70,-5,350,15]
     Offsets['Day:'] = [5,-5,120,15]
-    Offsets['Date:'] = [30,-8,130,15]
+    Offsets['Date:'] = [20,-8,90,15] # what is going on with this???
     Offsets['Weather:'] = [30,-8,130,15]
     Offsets['Hours:'] = [30,-8,140,15]
     Offsets['School Day:'] = [40,-5,120,15]
@@ -72,7 +75,7 @@ def pdf_extract(path):
         List_y = []
         search = pdf.pq('LTTextLineHorizontal:contains("%s")' % (movement))
 
-        # For each LTTextLineHorizontal Object, get Bounding box. Search "LTTetLineHorizontal" on https://github.com/euske/pdfminer/blob/master/pdfminer/layout.py
+        # For each LTTextLineHorizontal Object, get Bounding box. Search "LTTextLineHorizontal" on https://github.com/euske/pdfminer/blob/master/pdfminer/layout.py
         for instance in search:
             List_x.append(instance.layout.bbox[0])
             List_y.append(instance.layout.bbox[1])
@@ -86,14 +89,27 @@ def pdf_extract(path):
     for label in LabelList:
         print(label)
         Label_coords[label] = {}
-        Label_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (label))
-        print(Label_grab)
-        Label_coords[label]['x0y0'] = {}
-        Label_coords[label]['x0y0']['x0'] = float(Label_grab.attr('x0'))
-        Label_coords[label]['x0y0']['y0'] = float(Label_grab.attr('y0'))
-        Label_coords[label]['x1y1'] = {}
-        Label_coords[label]['x1y1']['x1'] = float(Label_grab.attr('x1'))
-        Label_coords[label]['x1y1']['y1'] = float(Label_grab.attr('y1'))
+
+        if(label == 'W/B TIME'):
+            Label_grab = pdf.pq('LTTextLineHorizontal:contains("W/B")')
+            # Grab the second instance of W/B
+            Label_grab = Label_grab[1]
+            Label_coords[label]['x0y0'] = {}
+            Label_coords[label]['x0y0']['x0'] = float(Label_grab.layout.x0)
+            Label_coords[label]['x0y0']['y0'] = float(Label_grab.layout.y0)
+            Label_coords[label]['x1y1'] = {}
+            Label_coords[label]['x1y1']['x1'] = float(Label_grab.layout.x1)
+            Label_coords[label]['x1y1']['y1'] = float(Label_grab.layout.y1)
+
+        else:
+            Label_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (label))
+            print(Label_grab)
+            Label_coords[label]['x0y0'] = {}
+            Label_coords[label]['x0y0']['x0'] = float(Label_grab.attr('x0'))
+            Label_coords[label]['x0y0']['y0'] = float(Label_grab.attr('y0'))
+            Label_coords[label]['x1y1'] = {}
+            Label_coords[label]['x1y1']['x1'] = float(Label_grab.attr('x1'))
+            Label_coords[label]['x1y1']['y1'] = float(Label_grab.attr('y1'))
 
         if label in ('N/B TIME','S/B TIME','E/B TIME','W/B TIME'):
             try:
@@ -327,21 +343,28 @@ def pdf_extract(path):
     dir_coords = {}
     # Find the location of each in the document
     for label in peak_labels:
-        label_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (label))
-        # Grab the bottom right corner of 'TIME'
-        dir_coords[label] = [float(label_grab.attr('x1')),float(label_grab.attr('y0'))]
-        # Grab the location of the direction (minus 'TIME') to create a line that will split the volume from the times
-        dir_label = label[:-5] 
-        dir_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (dir_label))
-        List_x = []
-        List_y = []
-        # For each instance of each direction, grab the coordinates of the bottom-right corner
-        for instance in dir_grab:
-            List_x.append(instance.layout.bbox[2])
-            List_y.append(instance.layout.bbox[1])
-        # We want to grab the instance that is lower (not for the special vehicles, but for the peak periods)
-        dir_coords[dir_label] = [round(min(List_x),2),round(min(List_y),2)]
-    #print dir_coords
+        if(label == 'W/B TIME'):
+            label_grab = pdf.pq('LTTextLineHorizontal:contains("W/B")')
+            label_grab = label_grab[1]
+            dir_coords[label] = [float(label_grab.layout.x1)+30,float(label_grab.layout.y0)]
+            dir_coords['W/B'] = [float(label_grab.layout.x1),float(label_grab.layout.y0)]
+
+        else:
+            label_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (label))
+            # Grab the bottom right corner of 'TIME'
+            
+            dir_coords[label] = [float(label_grab.attr('x1')),float(label_grab.attr('y0'))]
+            # Grab the location of the direction (minus 'TIME') to create a line that will split the volume from the times
+            dir_label = label[:-5] 
+            dir_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (dir_label))
+            List_x = []
+            List_y = []
+            # For each instance of each direction, grab the coordinates of the bottom-right corner
+            for instance in dir_grab:
+                List_x.append(instance.layout.bbox[2])
+                List_y.append(instance.layout.bbox[1])
+            # We want to grab the instance that is lower (not for the special vehicles, but for the peak periods)
+            dir_coords[dir_label] = [round(min(List_x),2),round(min(List_y),2)]
 
     Label_coords['pk'] = {}
     Label_coords['pk']['nbvol'] = [min_x_coord, Label_coords["NORTHBOUND Approach"]['x0y0']['y0']+5, dir_coords["N/B"][0]+2, dir_coords["N/B"][1]]
@@ -385,8 +408,10 @@ def pdf_extract(path):
         Label_coords[direction]['Th'] = [direction_coords['Th '][direction][0], Label_coords['TOTAL'][direction][1] + 1, direction_coords['Rt'][direction][0]+1, direction_coords['Th '][direction][1] +2]
         Label_coords[direction]['Lt'] = [direction_coords['Lt'][direction][0], Label_coords['TOTAL'][direction][1] + 1, direction_coords['Th '][direction][0], direction_coords['Lt'][direction][1] + 2]
 
-    print(Label_coords)
+    #print(Label_coords)
     ##### Survey Information
+    print("date box")
+    print(Label_coords['Date:']['box_coords'])
     survey_info = pdf.extract([
         ('with_formatter','text'),
         ('street_ns', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['North/South']['box_coords']))),
@@ -405,7 +430,13 @@ def pdf_extract(path):
 
     # Reformat date, add to Manual_TC
     #print survey_info
-    survey_info['date'] = datetime.strptime(survey_info['date'], '%B %d, %Y').date()
+    print('date')
+    print(survey_info)
+    
+    try:
+        survey_info['date'] = datetime.strptime(survey_info['date'], '%b %d, %Y').date()
+    except:
+        pass
     Manual_TC['Info'] = survey_info
 
     ##### Special Vehicles: Dual-Wheeled, Bikes, Buses
@@ -493,9 +524,12 @@ def pdf_extract(path):
                 endtime = datetime.strptime(hoursplit[1],fmt)
             except ValueError:
                 pass
-        starttime = datetime.combine(survey_info['date'], starttime.time())
-        endtime = datetime.combine(survey_info['date'], endtime.time())
-        survey_hours['hours'][i] = [starttime, endtime]
+        try:
+            starttime = datetime.combine(survey_info['date'], starttime.time())
+            endtime = datetime.combine(survey_info['date'], endtime.time())
+            survey_hours['hours'][i] = [starttime, endtime]
+        except:
+            pass
 
     ##### Volume Data
     volume_scrape = {}
@@ -586,7 +620,8 @@ def pdf_extract(path):
 
     ##### Return Final Dict
     #print "success!"
+    print(Manual_TC)
     return Manual_TC
 
-doc_path = 'C:/Users/dotcid034/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/4009_HOO16894.pdf'
+doc_path = 'C:/Users/dotcid034/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/3667_ISLLST94.pdf'
 pdf_extract(doc_path)
