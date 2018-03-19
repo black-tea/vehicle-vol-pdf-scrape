@@ -11,9 +11,6 @@ import glob
 from datetime import datetime, date, time
 import pdfquery
 import calendar
-print(list(calendar.month_abbr))
-print(datetime.strptime("FEB 24, 1994", "%b %d, %Y"))
-
 
 def pdf_extract(path):
 
@@ -87,7 +84,7 @@ def pdf_extract(path):
     Label_coords = {}
 
     for label in LabelList:
-        print(label)
+        #print(label)
         Label_coords[label] = {}
 
         if(label == 'W/B TIME'):
@@ -103,7 +100,7 @@ def pdf_extract(path):
 
         else:
             Label_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (label))
-            print(Label_grab)
+            #print(Label_grab)
             Label_coords[label]['x0y0'] = {}
             Label_coords[label]['x0y0']['x0'] = float(Label_grab.attr('x0'))
             Label_coords[label]['x0y0']['y0'] = float(Label_grab.attr('y0'))
@@ -114,7 +111,7 @@ def pdf_extract(path):
         if label in ('N/B TIME','S/B TIME','E/B TIME','W/B TIME'):
             try:
                 for key in Offsets[label]:
-                    print(key)
+                    #print(key)
                     Label_coords[label][key] = {}
                     Label_coords[label][key]['box_coords'] = [Offsets[label][key][0] + Label_coords[label]['x0y0']['x0'],
                                                               Offsets[label][key][1] + Label_coords[label]['x0y0']['y0'],
@@ -132,8 +129,8 @@ def pdf_extract(path):
                                                      ]
             except:
                 pass
-    print(Label_coords)
-    print('hi')
+    #print(Label_coords)
+    #print('hi')
     
     ##### Set parameters for Peak Hour / 15 Min Counts
 
@@ -410,8 +407,8 @@ def pdf_extract(path):
 
     #print(Label_coords)
     ##### Survey Information
-    print("date box")
-    print(Label_coords['Date:']['box_coords'])
+    print("N/S box")
+    print(Label_coords['North/South']['box_coords'])
     survey_info = pdf.extract([
         ('with_formatter','text'),
         ('street_ns', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['North/South']['box_coords']))),
@@ -430,13 +427,43 @@ def pdf_extract(path):
 
     # Reformat date, add to Manual_TC
     #print survey_info
-    print('date')
-    print(survey_info)
+    #print('date')
+    #print(survey_info)
+
+    # Fix N/S & E/W
+    if len(survey_info['street_ns']) == 0:
+        try:
+            ns_grab = pdf.pq('LTTextLineHorizontal:contains("North/South")')
+            ns_grab = ns_grab.text()
+            survey_info['street_ns'] = ns_grab[12:]
+        except:
+        	pass
+
+
+    full_months = ['JANUARY','FEBRUARY','MARCH','APRIL','JUNE','JULY','AUGUST','SEPTEMBER','SEPT','OCTOBER','NOVEMBER','DECEMBER']
+    repl_months = ['JAN','FEB','MAR','APR','JUN','JUL','AUG','SEP','SEP','OCT','NOV','DEC']
     
     try:
+        for month in full_months:
+            if month in survey_info['date'].upper():
+                index = full_months.index(month)
+                survey_info['date'] = survey_info['date'].upper().replace(month,repl_months[index])
         survey_info['date'] = datetime.strptime(survey_info['date'], '%b %d, %Y').date()
+
     except:
-        pass
+        try:
+            date_grab = pdf.pq('LTTextLineHorizontal:contains("Date:")')
+            date_grab = date_grab.text()
+            date_grab = date_grab[6:]
+
+            for month in full_months:
+                if month in date_grab.upper():
+                    index = full_months.index(month)
+                    date_grab = date_grab.upper().replace(month,repl_months[index])
+
+            survey_info['date'] = datetime.strptime(date_grab, '%b %d, %Y').date()
+        except:
+            pass
     Manual_TC['Info'] = survey_info
 
     ##### Special Vehicles: Dual-Wheeled, Bikes, Buses
@@ -491,19 +518,21 @@ def pdf_extract(path):
     peak_direction = []
 
     for direction in directions:
-        
-        peak_dict = {}    
+        #print(direction)
+        #peak_dict = {}    
         peak_time_split = peak_time_scrape[direction].split()
         peak_vol_split = peak_vol_scrape[direction].split()
+        #print(peak_time_split)
+        #print(peak_vol_split)
 
         for i in range(0,len(peak_time_split)): #COME BACK AND CHECK LATER
-
+            peak_dict = {}
             peak_dict['type'] = peak_types[i]
             peak_dict['approach'] = direction
             peak_dict['time'] = peak_time_split[i]
             peak_dict['volume'] = peak_vol_split[i]
-            #peak_dict['count_id'] = countid
-        peak_direction.append(peak_dict)
+
+            peak_direction.append(peak_dict)
 
     # Append to Manual_TC
     Manual_TC['PeakVol'] = peak_direction
@@ -514,10 +543,14 @@ def pdf_extract(path):
         ('hours', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['survey_hours']['box_coords'])))
         ])
     survey_hours['hours'] = survey_hours['hours'].split()
+    print('HOURS!')
+    #print(survey_hours['hours'])
 
     #Format survey hours using strptime
     for i in range(0, len(survey_hours['hours'])):
         hoursplit = survey_hours['hours'][i].split('-')
+        if i > 2:
+
         for fmt in ('%H','%H:%M'):
             try:
                 starttime = datetime.strptime(hoursplit[0],fmt)
@@ -623,5 +656,5 @@ def pdf_extract(path):
     print(Manual_TC)
     return Manual_TC
 
-doc_path = 'C:/Users/dotcid034/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/3667_ISLLST94.pdf'
+doc_path = 'C:/Users/Tim/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/3839_DONFRI93.pdf'
 pdf_extract(doc_path)
