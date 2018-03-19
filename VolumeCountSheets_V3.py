@@ -550,8 +550,12 @@ def pdf_extract(path):
     for i in range(0, len(survey_hours['hours'])):
         hoursplit = survey_hours['hours'][i].split('-')
         if i > 2:
-
-        for fmt in ('%H','%H:%M'):
+            try:
+                hoursplit[0] = hoursplit[0] + ' PM'
+                hoursplit[1] = hoursplit[1] + ' PM'
+            except:
+            	pass
+        for fmt in ('%I %p','%H','%H:%M'):
             try:
                 starttime = datetime.strptime(hoursplit[0],fmt)
                 endtime = datetime.strptime(hoursplit[1],fmt)
@@ -656,5 +660,5 @@ def pdf_extract(path):
     print(Manual_TC)
     return Manual_TC
 
-doc_path = 'C:/Users/Tim/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/3839_DONFRI93.pdf'
+doc_path = 'C:/Users/Tim/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/4009_HOO16893.pdf'
 pdf_extract(doc_path)
