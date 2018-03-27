@@ -21,6 +21,9 @@ def pdf_extract(path):
     # Create Empty Dict to organize the output
     Manual_TC = {}
 
+    # Create Empty Dict for error checks
+    QA_Check = {}
+
     ##### Survey Information
     # Begin with reference points
 
@@ -478,28 +481,36 @@ def pdf_extract(path):
     # print(special_veh_scrape)
     special_veh_scrape = special_veh_scrape['data'].split()
 
-    # Only add the special vehicle volumes if there are 12 values
+
+    special_veh_dict = {}
+    special_veh_dict['NB'] = special_veh_scrape[0:3] 
+    special_veh_dict['SB'] = special_veh_scrape[3:6]
+    special_veh_dict['EB'] = special_veh_scrape[6:9]
+    special_veh_dict['WB'] = special_veh_scrape[9:12]
+    special_veh_list = ['dual','bike','bus']
+
+    # Final list of dictionaries
+    special_vehicles = []
+    for direction in special_veh_dict:
+        for i in range(0,len(special_veh_dict[direction])):
+            temp_dict = {}
+            temp_dict['approach'] = direction
+            temp_dict['type'] = special_veh_list[i]
+            temp_dict['volume'] = special_veh_dict[direction][i]
+            #temp_dict['count_id'] = countid
+            special_vehicles.append(temp_dict)
+
+    Manual_TC['Spec_Veh'] = special_vehicles
+
+    # Update QA_Check dictionary            
     if(len(special_veh_scrape) == 12):
-        special_veh_dict = {}
-        special_veh_dict['NB'] = special_veh_scrape[0:3] 
-        special_veh_dict['SB'] = special_veh_scrape[3:6]
-        special_veh_dict['EB'] = special_veh_scrape[6:9]
-        special_veh_dict['WB'] = special_veh_scrape[9:12]
-        special_veh_list = ['dual','bike','bus']
+        QA_Check['Spec_Veh'] = 'Pass'
+    else:
+        QA_Check['Spec_Veh'] = 'Fail'
 
-        # Final list of dictionaries
-        special_vehicles = []
-        for direction in special_veh_dict:
-            for i in range(0,len(special_veh_dict[direction])):
-                temp_dict = {}
-                temp_dict['approach'] = direction
-                temp_dict['type'] = special_veh_list[i]
-                temp_dict['volume'] = special_veh_dict[direction][i]
-                #temp_dict['count_id'] = countid
-                special_vehicles.append(temp_dict)
-
-        # Append to Manual_TC
-        Manual_TC['Spec_Veh'] = special_vehicles
+    # Append to Manual_TC
+    #Manual_TC['Spec_Veh'] = special_vehicles
+    #print(Manual_TC['Spec_Veh'])
 
     ##### Peak Counts
     peak_types = ['am15','pm15','am60','pm60']
@@ -529,9 +540,21 @@ def pdf_extract(path):
         #peak_dict = {}    
         peak_time_split = peak_time_scrape[direction].split()
         peak_vol_split = peak_vol_scrape[direction].split()
+
+        #print ('peak split')
         #print(peak_time_split)
         #print(peak_vol_split)
 
+        if len(peak_time_split) != 4:
+            QA_Check['Peak'] = 'Fail'
+        elif len(peak_vol_split) != 4:
+            QA_Check['Peak'] = 'Fail'
+    if 'Peak' not in QA_Check:
+        QA_Check['Peak'] = 'Pass'
+
+
+        #print(peak_time_split)
+        #print(peak_vol_split)
         for i in range(0,len(peak_time_split)): #COME BACK AND CHECK LATER
             peak_dict = {}
             peak_dict['type'] = peak_types[i]
@@ -552,7 +575,11 @@ def pdf_extract(path):
                 try:
                     peak_time = datetime.strptime(peak_time_split[i],'%I.%M')
                 except:
-                    raise
+                    #raise
+                    try:
+                        peak_time = datetime.strptime(peak_time_split[i],'%H.%M')        
+                    except:
+                        raise
                     #pass
             try:
                 peak_start = datetime.combine(survey_info['date'], peak_time.time())
@@ -616,15 +643,19 @@ def pdf_extract(path):
                 ('test','LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in coords)))
                 ])
 
-            print('direction')
-            print(direction)
-            print('movement')
-            print(movement)
-            print('movement volume extract')
-            print(extract['test'])
-            print('coords')
-            print(coords)
+            #print('direction')
+            #print(direction)
+            #print('movement')
+            #print(movement)
+            #print('movement volume extract')
+            #print(extract['test'])
+            #print('coords')
+            #print(coords)
             volume_extract[direction][movement] = extract['test'].split()
+            if(len(volume_extract[direction][movement]) != 6):
+                QA_Check['Volume'] = 'Fail'
+    if 'Volume' not in QA_Check:
+        QA_Check['Volume'] = 'Pass'
 
     # Final list of dictionaries
     volume_data = []
@@ -653,8 +684,8 @@ def pdf_extract(path):
         ('WL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Ped']['W/L']))),
         ('EL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Ped']['E/L'])))
         ])
-    print('ped scrape')
-    print(ped_scrape)
+    #print('ped scrape')
+    #print(ped_scrape)
     
     sch_scrape = pdf.extract([
         ('with_formatter','text'),
@@ -663,8 +694,8 @@ def pdf_extract(path):
         ('WL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Sch']['W/L']))),
         ('EL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Sch']['E/L'])))
     ])
-    print('sch scape')
-    print(sch_scrape)
+    #print('sch scape')
+    #print(sch_scrape)
 
     # Split Ped v. Sch
     ped_sch_extract = {}
@@ -673,6 +704,14 @@ def pdf_extract(path):
         ped_sch_extract[leg] = {}
         ped_sch_extract[leg]['Ped'] = ped_scrape[leg].split()
         ped_sch_extract[leg]['Sch'] = sch_scrape[leg].split()
+
+        # Error Checking
+        if len(ped_sch_extract[leg]['Ped']) != 6:
+            QA_Check['Pedestrian'] = 'Fail'
+        elif len(ped_sch_extract[leg]['Sch']) != 6:
+            QA_Check['Pedestrian'] = 'Fail'
+    if 'Pedestrian' not in QA_Check:
+        QA_Check['Pedestrian'] = 'Pass'
 
 
     # Assign it to hour
@@ -694,8 +733,10 @@ def pdf_extract(path):
 
     ##### Return Final Dict
     #print "success!"
-    print(Manual_TC)
+    Manual_TC['QA'] = QA_Check
+    #print(Manual_TC)
+    #print(QA_Check)
     return Manual_TC
 
-doc_path = 'C:/Users/dotcid034/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/3839_DONFRI93.pdf'
-pdf_extract(doc_path)
+#doc_path = 'C:/Users/dotcid034/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/4347_IMPMON97.pdf'
+#pdf_extract(doc_path)
