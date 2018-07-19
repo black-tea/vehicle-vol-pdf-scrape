@@ -1,0 +1,13 @@
+convert test.png -negate -define morphology:compose=darken -morphology Thinning Rectangle:1x30+0+0 -negate test2.png
+
+convert test.png -type Grayscale -negate -define morphology:compose=darken -morphology Thinning Rectangle:1x50+0+0\< -negate test2.png
+
+convert test2.png -type Grayscale -negate -define morphology:compose=darken -morphology Thinning Rectangle:50x1+0+0 -negate test3.png
+
+alt + space to get menu
+
+tesseract options
+http://www.sk-spell.sk.cx/tesseract-ocr-parameters-in-302-version
+
+good answer!!! (for tesseract)
+https://stackoverflow.com/questions/42468845/ocr-tables-in-r-tesseract-and-pre-pocessing-images
