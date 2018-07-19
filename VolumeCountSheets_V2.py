@@ -21,6 +21,9 @@ def pdf_extract(path):
     # Create Empty Dict to organize the output
     Manual_TC = {}
 
+    # Create Empty Dict for error checks
+    QA_Check = {}
+
     ##### Survey Information
     # Begin with reference points
 
@@ -84,10 +87,10 @@ def pdf_extract(path):
     Label_coords = {}
 
     for label in LabelList:
-        print(label)
+        #print(label)
         Label_coords[label] = {}
         Label_grab = pdf.pq('LTTextLineHorizontal:contains("%s")' % (label))
-        print(Label_grab)
+        #print(Label_grab)
         Label_coords[label]['x0y0'] = {}
         Label_coords[label]['x0y0']['x0'] = float(Label_grab.attr('x0'))
         Label_coords[label]['x0y0']['y0'] = float(Label_grab.attr('y0'))
@@ -98,7 +101,7 @@ def pdf_extract(path):
         if label in ('N/B TIME','S/B TIME','E/B TIME','W/B TIME'):
             try:
                 for key in Offsets[label]:
-                    print(key)
+                    #print(key)
                     Label_coords[label][key] = {}
                     Label_coords[label][key]['box_coords'] = [Offsets[label][key][0] + Label_coords[label]['x0y0']['x0'],
                                                               Offsets[label][key][1] + Label_coords[label]['x0y0']['y0'],
@@ -116,8 +119,8 @@ def pdf_extract(path):
                                                      ]
             except:
                 pass
-    print(Label_coords)
-    print('hi')
+    #print(Label_coords)
+    #print('hi')
     
     ##### Set parameters for Peak Hour / 15 Min Counts
 
@@ -381,11 +384,11 @@ def pdf_extract(path):
     directions = ['NB','SB','EB','WB']
     for direction in directions:
         Label_coords[direction] = {}
-        Label_coords[direction]['Rt'] = [direction_coords['Rt'][direction][0], Label_coords['TOTAL'][direction][1] + 1, direction_coords['Rt'][direction][0] + 22, direction_coords['Rt'][direction][1] + 2]
-        Label_coords[direction]['Th'] = [direction_coords['Th '][direction][0], Label_coords['TOTAL'][direction][1] + 1, direction_coords['Rt'][direction][0]+1, direction_coords['Th '][direction][1] +2]
-        Label_coords[direction]['Lt'] = [direction_coords['Lt'][direction][0], Label_coords['TOTAL'][direction][1] + 1, direction_coords['Th '][direction][0], direction_coords['Lt'][direction][1] + 2]
+        Label_coords[direction]['Rt'] = [direction_coords['Rt'][direction][0]-8, Label_coords['TOTAL'][direction][1] + 1, direction_coords['Rt'][direction][0] + 22, direction_coords['Rt'][direction][1] + 2]
+        Label_coords[direction]['Th'] = [direction_coords['Th '][direction][0]-10, Label_coords['TOTAL'][direction][1] + 1, direction_coords['Rt'][direction][0]+1, direction_coords['Th '][direction][1] +2]
+        Label_coords[direction]['Lt'] = [direction_coords['Lt'][direction][0]-8, Label_coords['TOTAL'][direction][1] + 1, direction_coords['Th '][direction][0]-6, direction_coords['Lt'][direction][1] + 2]
 
-    print(Label_coords)
+    #print(Label_coords)
     ##### Survey Information
     survey_info = pdf.extract([
         ('with_formatter','text'),
@@ -399,13 +402,30 @@ def pdf_extract(path):
         ('district', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['District:']['box_coords']))),
         ])
 
-    # TESTING
-    #print "survey info"
-    #print survey_info
+    full_months = ['JANUARY','FEBRUARY','MARCH','APRIL','JUNE','JULY','AUGUST','SEPTEMBER','SEPT','OCTOBER','NOVEMBER','DECEMBER']
+    repl_months = ['JAN','FEB','MAR','APR','JUN','JUL','AUG','SEP','SEP','OCT','NOV','DEC']
+    
+    try:
+        for month in full_months:
+            if month in survey_info['date'].upper():
+                index = full_months.index(month)
+                survey_info['date'] = survey_info['date'].upper().replace(month,repl_months[index])
+        survey_info['date'] = datetime.strptime(survey_info['date'], '%b %d, %Y').date()
 
-    # Reformat date, add to Manual_TC
-    #print survey_info
-    survey_info['date'] = datetime.strptime(survey_info['date'], '%B %d, %Y').date()
+    except:
+        try:
+            date_grab = pdf.pq('LTTextLineHorizontal:contains("Date:")')
+            date_grab = date_grab.text()
+            date_grab = date_grab[6:]
+
+            for month in full_months:
+                if month in date_grab.upper():
+                    index = full_months.index(month)
+                    date_grab = date_grab.upper().replace(month,repl_months[index])
+
+            survey_info['date'] = datetime.strptime(date_grab, '%b %d, %Y').date()
+        except:
+            pass
     Manual_TC['Info'] = survey_info
 
     ##### Special Vehicles: Dual-Wheeled, Bikes, Buses
@@ -415,6 +435,7 @@ def pdf_extract(path):
         ('data', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['WHEELED']['box_coords'])))
         ])
     special_veh_scrape = special_veh_scrape['data'].split()
+
     special_veh_dict = {}
     special_veh_dict['NB'] = special_veh_scrape[0:3] 
     special_veh_dict['SB'] = special_veh_scrape[3:6]
@@ -435,6 +456,12 @@ def pdf_extract(path):
 
     # Append to Manual_TC
     Manual_TC['Spec_Veh'] = special_vehicles
+
+    # Update QA_Check dictionary 
+    if(len(special_veh_scrape) == 12):
+        QA_Check['Spec_Veh'] = 'Pass'
+    else:
+        QA_Check['Spec_Veh'] = 'Fail'
 
     ##### Peak Counts
     peak_types = ['am15','pm15','am60','pm60']
@@ -460,19 +487,53 @@ def pdf_extract(path):
     peak_direction = []
 
     for direction in directions:
-        
-        peak_dict = {}    
+        #print(direction)
+        #peak_dict = {}    
         peak_time_split = peak_time_scrape[direction].split()
         peak_vol_split = peak_vol_scrape[direction].split()
+        #print(peak_time_split)
+        #print(peak_vol_split)
+
+        # QA Check
+        if len(peak_time_split) != 4:
+            QA_Check['Peak'] = 'Fail'
+        elif len(peak_vol_split) != 4:
+            QA_Check['Peak'] = 'Fail'
+    if 'Peak' not in QA_Check:
+        QA_Check['Peak'] = 'Pass'
 
         for i in range(0,len(peak_time_split)): #COME BACK AND CHECK LATER
-
+            peak_dict = {}
             peak_dict['type'] = peak_types[i]
             peak_dict['approach'] = direction
             peak_dict['time'] = peak_time_split[i]
             peak_dict['volume'] = peak_vol_split[i]
-            #peak_dict['count_id'] = countid
-        peak_direction.append(peak_dict)
+            
+            # Add 'PM' value for peak period
+            peak_time = peak_dict['time'] 
+            if(peak_dict['type'] in ('pm15','pm60')):
+                peak_time = peak_time + " PM"
+            
+            # Convert to Date/Time
+            try:
+                peak_time = datetime.strptime(peak_time,'%I.%M %p')
+            except ValueError:
+                #raise
+                try:
+                    peak_time = datetime.strptime(peak_time_split[i],'%I.%M')
+                except:
+                    #raise
+                    try:
+                        peak_time = datetime.strptime(peak_time_split[i],'%H.%M')        
+                    except:
+                        raise
+            try:
+                peak_start = datetime.combine(survey_info['date'], peak_time.time())
+                peak_dict['time'] = peak_start
+            except:
+                pass
+
+            peak_direction.append(peak_dict)
 
     # Append to Manual_TC
     Manual_TC['PeakVol'] = peak_direction
@@ -487,15 +548,31 @@ def pdf_extract(path):
     #Format survey hours using strptime
     for i in range(0, len(survey_hours['hours'])):
         hoursplit = survey_hours['hours'][i].split('-')
-        for fmt in ('%H','%H:%M'):
+        if i > 2:
             try:
-                starttime = datetime.strptime(hoursplit[0],fmt)
-                endtime = datetime.strptime(hoursplit[1],fmt)
-            except ValueError:
+                hoursplit[0] = hoursplit[0] + ' PM'
+                hoursplit[1] = hoursplit[1] + ' PM'
+            except:
                 pass
-        starttime = datetime.combine(survey_info['date'], starttime.time())
-        endtime = datetime.combine(survey_info['date'], endtime.time())
-        survey_hours['hours'][i] = [starttime, endtime]
+        try:
+            starttime = datetime.strptime(hoursplit[0],'%I %p')
+            endtime = datetime.strptime(hoursplit[1],'%I %p')
+        except:
+            try:
+                starttime = datetime.strptime(hoursplit[0],'%H:%M')
+                endtime = datetime.strptime(hoursplit[1],'%H:%M')
+            except:
+                try:
+                    starttime = datetime.strptime(hoursplit[0],'%H')
+                    endtime = datetime.strptime(hoursplit[1],'%H')
+                except:
+                    pass
+        try:
+            starttime = datetime.combine(survey_info['date'], starttime.time())
+            endtime = datetime.combine(survey_info['date'], endtime.time())
+            survey_hours['hours'][i] = [starttime, endtime]
+        except:
+            pass
 
     ##### Volume Data
     volume_scrape = {}
@@ -519,7 +596,20 @@ def pdf_extract(path):
                     ('with_formatter','text'),
                     ('test','LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in coords)))
                     ])
+
+            #print('direction')
+            #print(direction)
+            #print('movement')
+            #print(movement)
+            #print('movement volume extract')
+            #print(extract['test'])
+            #print('coords')
+            #print(coords)
             volume_extract[direction][movement] = extract['test'].split()
+            if(len(volume_extract[direction][movement]) != 6):
+                QA_Check['Volume'] = 'Fail'
+    if 'Volume' not in QA_Check:
+        QA_Check['Volume'] = 'Pass'
 
 
     # Final list of dictionaries
@@ -549,6 +639,8 @@ def pdf_extract(path):
         ('WL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Ped']['W/L']))),
         ('EL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Ped']['E/L'])))
         ])
+    #print('ped scrape')
+    #print(ped_scrape)
     
     sch_scrape = pdf.extract([
         ('with_formatter','text'),
@@ -557,6 +649,8 @@ def pdf_extract(path):
         ('WL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Sch']['W/L']))),
         ('EL', 'LTTextLineHorizontal:in_bbox("%s")' % (','.join(str(e) for e in Label_coords['Sch']['E/L'])))
     ])
+    #print('sch scape')
+    #print(sch_scrape)
 
     # Split Ped v. Sch
     ped_sch_extract = {}
@@ -566,6 +660,13 @@ def pdf_extract(path):
         ped_sch_extract[leg]['Ped'] = ped_scrape[leg].split()
         ped_sch_extract[leg]['Sch'] = sch_scrape[leg].split()
 
+        # Error Checking
+        if len(ped_sch_extract[leg]['Ped']) != 6:
+            QA_Check['Pedestrian'] = 'Fail'
+        elif len(ped_sch_extract[leg]['Sch']) != 6:
+            QA_Check['Pedestrian'] = 'Fail'
+    if 'Pedestrian' not in QA_Check:
+        QA_Check['Pedestrian'] = 'Pass'
 
     # Assign it to hour
     ped_sch_data = []
@@ -586,7 +687,11 @@ def pdf_extract(path):
 
     ##### Return Final Dict
     #print "success!"
+    Manual_TC['QA'] = QA_Check
+    #print(Manual_TC)
+    #print(QA_Check)
     return Manual_TC
 
-doc_path = 'C:/Users/dotcid034/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/4009_HOO16894.pdf'
-pdf_extract(doc_path)
+
+#doc_path = 'C:/Users/dotcid034/Documents/GitHub/vehicle-vol-pdf-scrape/data/TrafficCountData/Manual/All/3667_ISLLST94.pdf'
+#pdf_extract(doc_path)
